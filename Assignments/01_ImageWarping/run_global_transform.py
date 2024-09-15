@@ -16,10 +16,17 @@ def apply_transform(image, scale, rotation, translation_x, translation_y, flip_h
     image_new = np.zeros((pad_size*2+image.shape[0], pad_size*2+image.shape[1], 3), dtype=np.uint8) + np.array((255,255,255), dtype=np.uint8).reshape(1,1,3)
     image_new[pad_size:pad_size+image.shape[0], pad_size:pad_size+image.shape[1]] = image
     image = np.array(image_new)
-    transformed_image = np.array(image)
+    # transformed_image = np.array(image)
 
     ### FILL: Apply Composition Transform 
     # Note: for scale and rotation, implement them around the center of the image （围绕图像中心进行放缩和旋转）
+    row, col, _ = image.shape
+    M = np.identity(3);
+    if flip_horizontal:
+        M = to_3x3(np.float32([[-1, 0, col], [0, 1, 0]])) @ M;
+    M = to_3x3(cv2.getRotationMatrix2D((col / 2, row / 2), rotation, scale)) @ M;
+    M = to_3x3(np.float32([[1, 0, translation_x], [0, 1, -translation_y]])) @ M;
+    transformed_image = cv2.warpAffine(image, M[:2], (row, col))
 
     return transformed_image
 
@@ -52,11 +59,11 @@ def interactive_transform():
 
         # Link inputs to the transformation function
         image_input.change(apply_transform, inputs, image_output)
-        scale.change(apply_transform, inputs, image_output)
-        rotation.change(apply_transform, inputs, image_output)
-        translation_x.change(apply_transform, inputs, image_output)
-        translation_y.change(apply_transform, inputs, image_output)
-        flip_horizontal.change(apply_transform, inputs, image_output)
+        scale.change(apply_transform, inputs, image_output, show_progress='minimal')
+        rotation.change(apply_transform, inputs, image_output, show_progress='minimal')
+        translation_x.change(apply_transform, inputs, image_output, show_progress='minimal')
+        translation_y.change(apply_transform, inputs, image_output, show_progress='minimal')
+        flip_horizontal.change(apply_transform, inputs, image_output, show_progress='minimal')
 
     return demo
 
