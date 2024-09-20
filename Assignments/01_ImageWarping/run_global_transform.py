@@ -59,11 +59,11 @@ def interactive_transform():
 
         # Link inputs to the transformation function
         image_input.change(apply_transform, inputs, image_output)
-        scale.change(apply_transform, inputs, image_output, show_progress='minimal')
-        rotation.change(apply_transform, inputs, image_output, show_progress='minimal')
-        translation_x.change(apply_transform, inputs, image_output, show_progress='minimal')
-        translation_y.change(apply_transform, inputs, image_output, show_progress='minimal')
-        flip_horizontal.change(apply_transform, inputs, image_output, show_progress='minimal')
+        scale.change(apply_transform, inputs, image_output)
+        rotation.change(apply_transform, inputs, image_output)
+        translation_x.change(apply_transform, inputs, image_output)
+        translation_y.change(apply_transform, inputs, image_output)
+        flip_horizontal.change(apply_transform, inputs, image_output)
 
     return demo
 
