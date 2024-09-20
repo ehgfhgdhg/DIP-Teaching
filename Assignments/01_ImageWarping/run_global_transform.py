@@ -21,12 +21,12 @@ def apply_transform(image, scale, rotation, translation_x, translation_y, flip_h
     ### FILL: Apply Composition Transform 
     # Note: for scale and rotation, implement them around the center of the image （围绕图像中心进行放缩和旋转）
     row, col, _ = image.shape
-    M = np.identity(3);
+    matrix = np.identity(3)
     if flip_horizontal:
-        M = to_3x3(np.float32([[-1, 0, col], [0, 1, 0]])) @ M;
-    M = to_3x3(cv2.getRotationMatrix2D((col / 2, row / 2), rotation, scale)) @ M;
-    M = to_3x3(np.float32([[1, 0, translation_x], [0, 1, -translation_y]])) @ M;
-    transformed_image = cv2.warpAffine(image, M[:2], (row, col))
+        matrix = to_3x3(np.float32([[-1, 0, col], [0, 1, 0]])) @ matrix
+    matrix = to_3x3(cv2.getRotationMatrix2D((col / 2, row / 2), rotation, scale)) @ matrix
+    matrix = to_3x3(np.float32([[1, 0, translation_x], [0, 1, -translation_y]])) @ matrix
+    transformed_image = cv2.warpAffine(image, matrix[:2], (row, col))
 
     return transformed_image
 
