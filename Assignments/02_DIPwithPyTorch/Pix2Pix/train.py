@@ -134,6 +134,17 @@ def validate(model, dataloader, criterion, device, epoch, num_epochs):
     avg_val_loss = val_loss / len(dataloader)
     print(f'Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {avg_val_loss:.4f}')
 
+
+def get_recent_checkpoint():
+    try:
+        filenames = os.listdir('checkpoints')
+        filenames.sort(key=lambda f: int(f[20:-4]))
+        filename = filenames[-1]
+        return int(filename[20:-4]), torch.load(os.path.join('checkpoints', filename), weights_only=True)
+    except (FileNotFoundError, NotADirectoryError):
+        return 0, None
+
+
 def main():
     """
     Main function to set up the training and validation processes.
@@ -156,9 +167,15 @@ def main():
     # Add a learning rate scheduler for decay
     scheduler = StepLR(optimizer, step_size=200, gamma=0.2)
 
+    # Load recent checkpoint if needed
+    start_num_epochs, checkpoint = get_recent_checkpoint()
+    if start_num_epochs > 0:
+        model.load_state_dict(checkpoint)
+        model.eval()
+
     # Training loop
     num_epochs = 800
-    for epoch in range(num_epochs):
+    for epoch in range(start_num_epochs, num_epochs):
         train_one_epoch(model, train_loader, optimizer, criterion, device, epoch, num_epochs)
         validate(model, val_loader, criterion, device, epoch, num_epochs)
 
