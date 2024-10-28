@@ -171,7 +171,6 @@ def main():
     start_num_epochs, checkpoint = get_recent_checkpoint()
     if start_num_epochs > 0:
         model.load_state_dict(checkpoint)
-        model.eval()
 
     # Training loop
     num_epochs = 800
