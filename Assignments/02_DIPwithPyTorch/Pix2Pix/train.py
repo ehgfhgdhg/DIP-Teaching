@@ -141,7 +141,7 @@ def get_recent_checkpoint():
         filenames.sort(key=lambda f: int(f[20:-4]))
         filename = filenames[-1]
         return int(filename[20:-4]), torch.load(os.path.join('checkpoints', filename), weights_only=True)
-    except (FileNotFoundError, NotADirectoryError):
+    except (FileNotFoundError, NotADirectoryError, IndexError):
         return 0, None
 
 

@@ -1,122 +1,76 @@
 import torch.nn as nn
 
+
 class FullyConvNetwork(nn.Module):
 
     def __init__(self):
         super().__init__()
          # Encoder (Convolutional Layers)
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1),  # Input channels: 3, Output channels: 64
-            # nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
         ### FILL: add more CONV Layers
-        self.conv2 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        self.conv3 = nn.Sequential(
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        self.conv4 = nn.Sequential(
-            nn.Conv2d(256,512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        self.conv5 = nn.Sequential(
-            nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        self.conv6 = nn.Sequential(
-            nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        self.conv7 = nn.Sequential(
-            nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        self.conv8 = nn.Sequential(
-            nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        
         # Decoder (Deconvolution Layers)
         ### FILL: add ConvTranspose Layers
-        self.conv9 = nn.Sequential(
-            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.Dropout2d(inplace=True),
-            nn.ReLU(inplace=True)
-        )
-        self.conv10 = nn.Sequential(
-            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.Dropout2d(inplace=True),
-            nn.ReLU(inplace=True)
-        )
-        self.conv11 = nn.Sequential(
-            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.Dropout2d(inplace=True),
-            nn.ReLU(inplace=True)
-        )
-        self.conv12 = nn.Sequential(
-            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True)
-        )
-        self.conv13 = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True)
-        )
-        self.conv14 = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True)
-        )
-        self.conv15 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+        ### Note: since last layer outputs RGB channels, may need specific activation function
+        self.block1 = nn.Sequential(
+            nn.Conv2d(3, 64, 3, stride=2, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True)
+            nn.ReLU(),
         )
-
-        ### None: since last layer outputs RGB channels, may need specific activation function
-        self.conv16 = nn.Sequential(
-            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),
-            nn.Tanh()
+        self.block2 = nn.Sequential(
+            nn.Conv2d(64, 128, 3, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
         )
+        self.block3 = nn.Sequential(
+            nn.Conv2d(128, 256, 3, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+        )
+        self.block4 = nn.Sequential(
+            nn.Conv2d(256, 512, 3, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+        )
+        self.block5 = nn.Sequential(
+            nn.Conv2d(512, 512, 3, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+        )
+        self.block6 = nn.Sequential(
+            nn.Conv2d(512, 512, 7, padding=3),
+            nn.BatchNorm2d(512),
+            nn.ReLU()
+        )
+        self.block7 = nn.Sequential(
+            nn.Conv2d(512, 512, 1),
+            nn.BatchNorm2d(512),
+            nn.ReLU()
+        )
+        self.upscore_pool5 = nn.Sequential(
+            nn.Conv2d(512, 3, 1),
+            nn.ConvTranspose2d(3, 3, 4, 2, padding=1)
+        )
+        self.score_pool4 = nn.ConvTranspose2d(512, 3, 1)
+        self.score_pool3 = nn.ConvTranspose2d(256, 3, 1)
+        self.upscore_pool4 = nn.ConvTranspose2d(3, 3, 4, 2, padding=1)
+        self.upscore_pool = nn.ConvTranspose2d(3, 3, 16, 8, padding=4)
 
     def forward(self, x):
         # Encoder forward pass
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
-        x = self.conv6(x)
-        x = self.conv7(x)
-        x = self.conv8(x)
-        
         # Decoder forward pass
-        x = self.conv9(x)
-        x = self.conv10(x)
-        x = self.conv11(x)
-        x = self.conv12(x)
-        x = self.conv13(x)
-        x = self.conv14(x)
-        x = self.conv15(x)
-        
         ### FILL: encoder-decoder forward pass
-
-        output = self.conv16(x)
-        
+        x1 = self.block1(x)
+        x2 = self.block2(x1)
+        x3 = self.block3(x2)
+        x4 = self.block4(x3)
+        x5 = self.block5(x4)
+        x6 = self.block6(x5)
+        x7 = self.block7(x6)
+        pool5 = self.upscore_pool5(x7)
+        pool4 = self.score_pool4(x4)
+        pool3 = self.score_pool3(x3)
+        pool4 = pool4 + pool5
+        pool4 = self.upscore_pool4(pool4)
+        pool = pool3 + pool4
+        output = self.upscore_pool(pool)
         return output
     
