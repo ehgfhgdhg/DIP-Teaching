@@ -52,7 +52,10 @@ class FullyConvNetwork(nn.Module):
         self.score_pool4 = nn.ConvTranspose2d(512, 3, 1)
         self.score_pool3 = nn.ConvTranspose2d(256, 3, 1)
         self.upscore_pool4 = nn.ConvTranspose2d(3, 3, 4, 2, padding=1)
-        self.upscore_pool = nn.ConvTranspose2d(3, 3, 16, 8, padding=4)
+        self.upscore_pool = nn.Sequential(
+            nn.ConvTranspose2d(3, 3, 16, 8, padding=4),
+            nn.Tanh()
+        )
 
     def forward(self, x):
         # Encoder forward pass
