@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from facades_dataset import FacadesDataset
-from FCN_network import FullyConvNetwork
+from GeneratorNetwork import GeneratorNetwork
 from torch.optim.lr_scheduler import StepLR
 
 def tensor_to_image(tensor):
@@ -79,14 +79,14 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, epoch, num_
         optimizer.zero_grad()
 
         # Forward pass
-        outputs = model(image_semantic)
+        outputs = model(image_rgb)
 
         # Save sample images every 5 epochs
         if epoch % 5 == 0 and i == 0:
-            save_images(image_semantic, image_rgb, outputs, 'train_results', epoch)
+            save_images(image_rgb, image_semantic, outputs, 'train_results', epoch)
 
         # Compute the loss
-        loss = criterion(outputs, image_rgb)
+        loss = criterion(outputs, image_semantic)
 
         # Backward pass and optimization
         loss.backward()
@@ -120,15 +120,15 @@ def validate(model, dataloader, criterion, device, epoch, num_epochs):
             image_semantic = image_semantic.to(device)
 
             # Forward pass
-            outputs = model(image_semantic)
+            outputs = model(image_rgb)
 
             # Compute the loss
-            loss = criterion(outputs, image_rgb)
+            loss = criterion(outputs, image_semantic)
             val_loss += loss.item()
 
             # Save sample images every 5 epochs
             if epoch % 5 == 0 and i == 0:
-                save_images(image_semantic, image_rgb, outputs, 'val_results', epoch)
+                save_images(image_rgb, image_semantic, outputs, 'val_results', epoch)
 
     # Calculate average validation loss
     avg_val_loss = val_loss / len(dataloader)
@@ -160,7 +160,7 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=20, shuffle=False, num_workers=4)
 
     # Initialize model, loss function
-    model = FullyConvNetwork().to(device)
+    model = GeneratorNetwork().to(device)
     criterion = nn.L1Loss()
 
     # Load recent checkpoint if needed
