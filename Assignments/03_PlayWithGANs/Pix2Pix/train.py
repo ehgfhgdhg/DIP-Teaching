@@ -167,10 +167,13 @@ def main():
     start_num_epochs, checkpoint = get_recent_checkpoint()
     if start_num_epochs > 0:
         model.load_state_dict(checkpoint)
-
-    # Initialize optimizer and add a learning rate scheduler for decay
-    optimizer = optim.Adam([{'params': model.parameters(), 'initial_lr': 0.001}], lr=0.001, betas=(0.5, 0.999))
-    scheduler = StepLR(optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
+        # Initialize optimizer and add a learning rate scheduler for decay
+        optimizer = optim.Adam([{'params': model.parameters(), 'initial_lr': 0.001}], lr=0.001, betas=(0.5, 0.999))
+        scheduler = StepLR(optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
+    else:
+        # Initialize optimizer and add a learning rate scheduler for decay
+        optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.5, 0.999))
+        scheduler = StepLR(optimizer, step_size=200, gamma=0.2)
 
     # Training loop
     num_epochs = 800
