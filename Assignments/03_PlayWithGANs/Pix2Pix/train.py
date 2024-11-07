@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from facades_dataset import FacadesDataset
-from FCN_network import FullyConvNetwork
+from GeneratorNetwork import GeneratorNetwork
 from torch.optim.lr_scheduler import StepLR
 
 def tensor_to_image(tensor):
@@ -160,7 +160,7 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=20, shuffle=False, num_workers=4)
 
     # Initialize model, loss function
-    model = FullyConvNetwork().to(device)
+    model = GeneratorNetwork().to(device)
     criterion = nn.L1Loss()
 
     # Load recent checkpoint if needed

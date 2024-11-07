@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Pix2Pix Result</title>
+    </head>
+    <body>
+        <script>
+            var total_fail = -1;
+            var max_fail = 10;
+            var fast_update_ms = 100;
+            var slow_update_ms = 10000;
+            var update_id = -1;
+            var next_epoch = 0;
+            var epoch_step = 5;
+            getTrainingUpdate = function (classText) {
+                if (document.getElementById('epoch_' + String(next_epoch) + '_' + classText) !== null)
+                    return;
+                fetch(classText + '/epoch_' + String(next_epoch))
+                    .then(response => {
+                        if (response.ok) {
+                            var d = document.createElement('div');
+                            d.id = 'epoch_' + String(next_epoch) + '_' + classText;
+                            var p = document.createElement('p');
+                            p.innerText = classText;
+                            d.appendChild(p);
+                            for (var i = 1; i <= 5; ++i) {
+                                var a = document.createElement('a');
+                                a.href = classText + '/epoch_' + String(next_epoch) + '/result_' + String(i) + '.png';
+                                a.target = '_blank';
+                                var img = document.createElement('img');
+                                img.src = a.href;
+                                img.alt = 'result_' + String(i) + '.png';
+                                img.width = 200;
+                                a.appendChild(img);
+                                d.appendChild(a);
+                            }
+                            document.getElementById('epoch_' + String(next_epoch) + '_' + classText + '_div').appendChild(d)
+                        }
+                    }
+                );
+            };
+            classTextList = ['train_results', 'val_results'];
+            updateData = function () {
+                var flag = classTextList
+                    .map(classText => {
+                        return document.getElementById('epoch_' + String(next_epoch) + '_' + classText) !== null;
+                    })
+                    .reduce((a, b) => a && b);
+                if (flag) {
+                    next_epoch += epoch_step;
+                }
+                else {
+                    ++total_fail;
+                    if (total_fail == max_fail) {
+                        window.clearInterval(update_id);
+                        window.setInterval(updateData, slow_update_ms);
+                    }
+                }
+                if (document.getElementById('epoch_' + String(next_epoch)) === null) {
+                    var d = document.createElement('div');
+                    d.id = 'epoch_' + String(next_epoch);
+                    var p = document.createElement('p');
+                    p.innerText = 'epoch_' + String(next_epoch);
+                    d.appendChild(p);
+                    classTextList.forEach(classText => {
+                        var d2 = document.createElement('div');
+                        d2.id = 'epoch_' + String(next_epoch) + '_' + classText + '_div';
+                        d.appendChild(d2);
+                    });
+                    document.body.appendChild(d);
+                }
+                classTextList.forEach(classText => {
+                    getTrainingUpdate(classText);
+                });
+            };
+            updateData();
+            update_id = window.setInterval(updateData, fast_update_ms);
+            window.setInterval(() => { window.scrollBy(0, 10); }, 10);
+        </script>
+    </body>
+</html>

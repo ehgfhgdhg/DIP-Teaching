@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class FullyConvNetwork(nn.Module):
+class GeneratorNetwork(nn.Module):
 
     def __init__(self):
         super().__init__()
