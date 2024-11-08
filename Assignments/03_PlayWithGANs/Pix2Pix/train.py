@@ -9,6 +9,8 @@ from facades_dataset import FacadesDataset
 from GeneratorNetwork import GeneratorNetwork
 from torch.optim.lr_scheduler import StepLR
 
+IMAGE_GENERATION = True
+
 def tensor_to_image(tensor):
     """
     Convert a PyTorch tensor to a NumPy array suitable for OpenCV.
@@ -79,14 +81,23 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, epoch, num_
         optimizer.zero_grad()
 
         # Forward pass
-        outputs = model(image_rgb)
+        if IMAGE_GENERATION:
+            outputs = model(image_semantic)
+        else:
+            outputs = model(image_rgb)
 
         # Save sample images every 5 epochs
         if epoch % 5 == 0 and i == 0:
-            save_images(image_rgb, image_semantic, outputs, 'train_results', epoch)
+            if IMAGE_GENERATION:
+                save_images(image_semantic, image_rgb, outputs, 'train_results', epoch)
+            else:
+                save_images(image_rgb, image_semantic, outputs, 'train_results', epoch)
 
         # Compute the loss
-        loss = criterion(outputs, image_semantic)
+        if IMAGE_GENERATION:
+            loss = criterion(outputs, image_rgb)
+        else:
+            loss = criterion(outputs, image_semantic)
 
         # Backward pass and optimization
         loss.backward()
@@ -120,15 +131,24 @@ def validate(model, dataloader, criterion, device, epoch, num_epochs):
             image_semantic = image_semantic.to(device)
 
             # Forward pass
-            outputs = model(image_rgb)
+            if IMAGE_GENERATION:
+                outputs = model(image_semantic)
+            else:
+                outputs = model(image_rgb)
 
             # Compute the loss
-            loss = criterion(outputs, image_semantic)
+            if IMAGE_GENERATION:
+                loss = criterion(outputs, image_rgb)
+            else:
+                loss = criterion(outputs, image_semantic)
             val_loss += loss.item()
 
             # Save sample images every 5 epochs
             if epoch % 5 == 0 and i == 0:
-                save_images(image_rgb, image_semantic, outputs, 'val_results', epoch)
+                if IMAGE_GENERATION:
+                    save_images(image_semantic, image_rgb, outputs, 'val_results', epoch)
+                else:
+                    save_images(image_rgb, image_semantic, outputs, 'val_results', epoch)
 
     # Calculate average validation loss
     avg_val_loss = val_loss / len(dataloader)

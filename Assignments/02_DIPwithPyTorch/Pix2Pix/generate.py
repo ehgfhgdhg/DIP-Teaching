@@ -5,6 +5,8 @@ import torch
 import argparse
 from FCN_network import FullyConvNetwork
 
+IMAGE_GENERATION = True
+
 def tensor_to_image(tensor):
     """
     Convert a PyTorch tensor to a NumPy array suitable for OpenCV.
@@ -38,10 +40,10 @@ def get_recent_checkpoint():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_filename')
-    parser.add_argument('output_filename')
+    parser.add_argument('input_folder')
+    parser.add_argument('output_folder')
     args = parser.parse_args()
-    input_filename, output_filename = args.input_filename, args.output_filename
+    input_folder, output_folder = args.input_folder, args.output_folder
 
     """
     Main function to set up the training and validation processes.
@@ -52,6 +54,8 @@ def main():
     # Initialize model, loss function, and optimizer
     model = FullyConvNetwork().to(device)
 
+    criterion = torch.nn.L1Loss()
+
     # Load recent checkpoint if needed
     start_num_epochs, checkpoint = get_recent_checkpoint()
     if start_num_epochs > 0:
@@ -60,33 +64,48 @@ def main():
     else:
         raise RuntimeError("Cannot load recent model")
 
-    img_color_semantic = cv2.imread(input_filename)
-    # Convert the image to a PyTorch tensor
-    image = torch.from_numpy(img_color_semantic).permute(2, 0, 1).float() / 255.0 * 2.0 - 1.0
-    image_rgb = torch.Tensor(size=(1, image.size()[0], image.size()[1], image.size()[2]//2))
-    image_semantic = torch.Tensor(size=(1, image.size()[0], image.size()[1], image.size()[2]//2))
-    image_rgb[0, :, :, :] = image[:, :, :256]
-    image_semantic[0, :, :, :] = image[:, :, 256:]
+    for filename in os.listdir(input_folder):
+        img_color_semantic = cv2.imread(os.path.join(input_folder, filename))
+        # Convert the image to a PyTorch tensor
+        image = torch.from_numpy(img_color_semantic).permute(2, 0, 1).float() / 255.0 * 2.0 - 1.0
+        image_rgb = torch.Tensor(size=(1, image.size()[0], image.size()[1], image.size()[2]//2))
+        image_semantic = torch.Tensor(size=(1, image.size()[0], image.size()[1], image.size()[2]//2))
+        image_rgb[0, :, :, :] = image[:, :, :256]
+        image_semantic[0, :, :, :] = image[:, :, 256:]
 
-    with torch.no_grad():
-        # Move data to the device
-        image_rgb = image_rgb.to(device)
-        image_semantic = image_semantic.to(device)
+        with torch.no_grad():
+            # Move data to the device
+            image_rgb = image_rgb.to(device)
+            image_semantic = image_semantic.to(device)
 
-        # Forward pass
-        outputs = model(image_semantic)
+            if IMAGE_GENERATION:
+                # Forward pass
+                outputs = model(image_semantic)
+                loss = criterion(outputs, image_rgb)
 
-        # Save sample images
-        # Convert tensors to images
-        input_img_np = tensor_to_image(image_semantic[0])
-        target_img_np = tensor_to_image(image_rgb[0])
-        output_img_np = tensor_to_image(outputs[0])
+                # Save sample images
+                # Convert tensors to images
+                input_img_np = tensor_to_image(image_semantic[0])
+                target_img_np = tensor_to_image(image_rgb[0])
+                output_img_np = tensor_to_image(outputs[0])
+            else:
+                # Forward pass
+                outputs = model(image_rgb)
+                loss = criterion(outputs, image_semantic)
 
-        # Concatenate the images horizontally
-        comparison = np.hstack((input_img_np, target_img_np, output_img_np))
+                # Save sample images
+                # Convert tensors to images
+                input_img_np = tensor_to_image(image_rgb[0])
+                target_img_np = tensor_to_image(image_semantic[0])
+                output_img_np = tensor_to_image(outputs[0])
 
-        # Save the comparison image
-        cv2.imwrite(output_filename, comparison)
+            # Concatenate the images horizontally
+            comparison = np.hstack((input_img_np, target_img_np, output_img_np))
+
+            # Save the comparison image
+            cv2.imwrite(os.path.join(output_folder, filename), comparison)
+
+            print(f'"{filename}", loss={loss.item():.4f}')
 
 if __name__ == '__main__':
     main()
