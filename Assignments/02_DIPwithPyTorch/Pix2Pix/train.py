@@ -79,14 +79,14 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, epoch, num_
         optimizer.zero_grad()
 
         # Forward pass
-        outputs = model(image_rgb)
+        outputs = model(image_semantic)
 
         # Save sample images every 5 epochs
         if epoch % 5 == 0 and i == 0:
-            save_images(image_rgb, image_semantic, outputs, 'train_results', epoch)
+            save_images(image_semantic, image_rgb, outputs, 'train_results', epoch)
 
         # Compute the loss
-        loss = criterion(outputs, image_semantic)
+        loss = criterion(outputs, image_rgb)
 
         # Backward pass and optimization
         loss.backward()
@@ -120,15 +120,15 @@ def validate(model, dataloader, criterion, device, epoch, num_epochs):
             image_semantic = image_semantic.to(device)
 
             # Forward pass
-            outputs = model(image_rgb)
+            outputs = model(image_semantic)
 
             # Compute the loss
-            loss = criterion(outputs, image_semantic)
+            loss = criterion(outputs, image_rgb)
             val_loss += loss.item()
 
             # Save sample images every 5 epochs
             if epoch % 5 == 0 and i == 0:
-                save_images(image_rgb, image_semantic, outputs, 'val_results', epoch)
+                save_images(image_semantic, image_rgb, outputs, 'val_results', epoch)
 
     # Calculate average validation loss
     avg_val_loss = val_loss / len(dataloader)
