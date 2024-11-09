@@ -1,3 +1,4 @@
+import math
 import os
 import cv2
 import numpy as np
@@ -7,6 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from facades_dataset import FacadesDataset
 from GeneratorNetwork import GeneratorNetwork
+from DiscriminatorNetwork import DiscriminatorNetwork
 from torch.optim.lr_scheduler import StepLR
 
 IMAGE_GENERATION = True
@@ -56,35 +58,33 @@ def save_images(inputs, targets, outputs, folder_name, epoch, num_images=5):
         # Save the comparison image
         cv2.imwrite(f'{folder_name}/epoch_{epoch}/result_{i + 1}.png', comparison)
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, epoch, num_epochs):
+def train_one_epoch(generator_model, discriminator_model, dataloader, gen_optimizer, dis_optimizer, device, epoch, num_epochs):
     """
     Train the model for one epoch.
 
     Args:
-        model (nn.Module): The neural network model.
+        generator_model (nn.Module): The neural network generator model.
+        discriminator_model (nn.Module): The neural network discriminator model.
         dataloader (DataLoader): DataLoader for the training data.
-        optimizer (Optimizer): Optimizer for updating model parameters.
-        criterion (Loss): Loss function.
+        gen_optimizer (Optimizer): Optimizer for updating generator model parameters.
+        dis_optimizer (Optimizer): Optimizer for updating discriminator model parameters.
         device (torch.device): Device to run the training on.
         epoch (int): Current epoch number.
         num_epochs (int): Total number of epochs.
     """
-    model.train()
-    running_loss = 0.0
+    generator_model.train()
+    discriminator_model.train()
 
     for i, (image_rgb, image_semantic) in enumerate(dataloader):
         # Move data to the device
         image_rgb = image_rgb.to(device)
         image_semantic = image_semantic.to(device)
 
-        # Zero the gradients
-        optimizer.zero_grad()
-
         # Forward pass
         if IMAGE_GENERATION:
-            outputs = model(image_semantic)
+            outputs = generator_model(image_semantic)
         else:
-            outputs = model(image_rgb)
+            outputs = generator_model(image_rgb)
 
         # Save sample images every 5 epochs
         if epoch % 5 == 0 and i == 0:
@@ -93,35 +93,56 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, epoch, num_
             else:
                 save_images(image_rgb, image_semantic, outputs, 'train_results', epoch)
 
+        # Zero the gradients
+        dis_optimizer.zero_grad()
+
         # Compute the loss
         if IMAGE_GENERATION:
-            loss = criterion(outputs, image_rgb)
+            dis_loss = discriminator_model(image_rgb, image_semantic).log() + (
+                    1 - discriminator_model(outputs.detach(), image_semantic)).log()
         else:
-            loss = criterion(outputs, image_semantic)
+            dis_loss = discriminator_model(image_semantic, image_rgb).log() + (
+                    1 - discriminator_model(outputs.detach(), image_rgb)).log()
+        dis_loss = dis_loss.sum()
 
-        # Backward pass and optimization
-        loss.backward()
-        optimizer.step()
+        # Zero the gradients
+        gen_optimizer.zero_grad()
 
-        # Update running loss
-        running_loss += loss.item()
+        # Compute the loss
+        if IMAGE_GENERATION:
+            gen_loss = discriminator_model(outputs, image_semantic).log()
+        else:
+            gen_loss = discriminator_model(outputs, image_rgb).log()
+        gen_loss = gen_loss.sum()
 
-        # Print loss information
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(dataloader)}], Loss: {loss.item():.4f}')
+        if 2 * gen_loss > dis_loss:
+            # Backward pass and optimization
+            gen_loss.backward()
+            gen_optimizer.step()
+            # Print loss information
+            print(f'Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(dataloader)}], Generator Score: {-gen_loss.item():.4f}')
+        else:
+            # Backward pass and optimization
+            dis_loss.backward()
+            dis_optimizer.step()
+            # Print loss information
+            print(
+                f'Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(dataloader)}], Discriminator Score: {-dis_loss.item():4f}')
 
-def validate(model, dataloader, criterion, device, epoch, num_epochs):
+def validate(generator_model, discriminator_model, dataloader, device, epoch, num_epochs):
     """
     Validate the model on the validation dataset.
 
     Args:
-        model (nn.Module): The neural network model.
+        generator_model (nn.Module): The neural network generator model.
+        discriminator_model (nn.Module): The neural network discriminator model.
         dataloader (DataLoader): DataLoader for the validation data.
-        criterion (Loss): Loss function.
         device (torch.device): Device to run the validation on.
         epoch (int): Current epoch number.
         num_epochs (int): Total number of epochs.
     """
-    model.eval()
+    generator_model.eval()
+    discriminator_model.eval()
     val_loss = 0.0
 
     with torch.no_grad():
@@ -132,15 +153,16 @@ def validate(model, dataloader, criterion, device, epoch, num_epochs):
 
             # Forward pass
             if IMAGE_GENERATION:
-                outputs = model(image_semantic)
+                outputs = generator_model(image_semantic)
             else:
-                outputs = model(image_rgb)
+                outputs = generator_model(image_rgb)
 
             # Compute the loss
             if IMAGE_GENERATION:
-                loss = criterion(outputs, image_rgb)
+                loss = discriminator_model(image_rgb, image_semantic).log() + (1 - discriminator_model(outputs, image_semantic)).log()
             else:
-                loss = criterion(outputs, image_semantic)
+                loss = discriminator_model(image_semantic, image_rgb).log() + (1 - discriminator_model(outputs, image_rgb)).log()
+            loss = loss.sum()
             val_loss += loss.item()
 
             # Save sample images every 5 epochs
@@ -152,7 +174,7 @@ def validate(model, dataloader, criterion, device, epoch, num_epochs):
 
     # Calculate average validation loss
     avg_val_loss = val_loss / len(dataloader)
-    print(f'Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {avg_val_loss:.4f}')
+    print(f'Epoch [{epoch + 1}/{num_epochs}], Validation Score: {-avg_val_loss:.4f}')
 
 
 def get_recent_checkpoint():
@@ -180,34 +202,48 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=20, shuffle=False, num_workers=4)
 
     # Initialize model, loss function
-    model = GeneratorNetwork().to(device)
-    criterion = nn.L1Loss()
+    generator_model = GeneratorNetwork().to(device)
+    discriminator_model = DiscriminatorNetwork().to(device)
 
     # Load recent checkpoint if needed
     start_num_epochs, checkpoint = get_recent_checkpoint()
     if start_num_epochs > 0:
-        model.load_state_dict(checkpoint)
-        # Initialize optimizer and add a learning rate scheduler for decay
-        optimizer = optim.Adam([{'params': model.parameters(), 'initial_lr': 0.001}], lr=0.001, betas=(0.5, 0.999))
-        scheduler = StepLR(optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
+        generator_model.load_state_dict(checkpoint['generator_model_state_dict'])
+        discriminator_model.load_state_dict(checkpoint['discriminator_model_state_dict'])
+        # Initialize optimizers and add learning rate schedulers for decay
+        gen_optimizer = optim.Adam([{'params': generator_model.parameters(), 'initial_lr': 0.001}], lr=0.001,
+                                   betas=(0.5, 0.999))
+        gen_scheduler = StepLR(gen_optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
+        dis_optimizer = optim.Adam([{'params': generator_model.parameters(), 'initial_lr': 0.001}], lr=0.001,
+                                   betas=(0.5, 0.999))
+        dis_scheduler = StepLR(dis_optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
     else:
-        # Initialize optimizer and add a learning rate scheduler for decay
-        optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.5, 0.999))
-        scheduler = StepLR(optimizer, step_size=200, gamma=0.2)
+        if checkpoint:
+            generator_model.load_state_dict(checkpoint)
+        # Initialize optimizers and add learning rate schedulers for decay
+        gen_optimizer = optim.Adam(generator_model.parameters(), lr=0.001, betas=(0.5, 0.999))
+        gen_scheduler = StepLR(gen_optimizer, step_size=200, gamma=0.2)
+        dis_optimizer = optim.Adam(generator_model.parameters(), lr=0.001, betas=(0.5, 0.999))
+        dis_scheduler = StepLR(dis_optimizer, step_size=200, gamma=0.2)
 
     # Training loop
     num_epochs = 800
     for epoch in range(start_num_epochs, num_epochs):
-        train_one_epoch(model, train_loader, optimizer, criterion, device, epoch, num_epochs)
-        validate(model, val_loader, criterion, device, epoch, num_epochs)
+        train_one_epoch(generator_model, discriminator_model, train_loader, gen_optimizer, dis_optimizer,
+                        device, epoch, num_epochs)
+        validate(generator_model, discriminator_model, val_loader, device, epoch, num_epochs)
 
         # Step the scheduler after each epoch
-        scheduler.step()
+        gen_scheduler.step()
+        dis_scheduler.step()
 
         # Save model checkpoint every 20 epochs
         if (epoch + 1) % 20 == 0:
             os.makedirs('checkpoints', exist_ok=True)
-            torch.save(model.state_dict(), f'checkpoints/pix2pix_model_epoch_{epoch + 1}.pth')
+            torch.save({
+                'generator_model_state_dict': generator_model.state_dict(),
+                'discriminator_model_state_dict': discriminator_model.state_dict(),
+            }, f'checkpoints/pix2pix_model_epoch_{epoch + 1}.pth')
 
 if __name__ == '__main__':
     main()
