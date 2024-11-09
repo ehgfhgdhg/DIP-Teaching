@@ -17,7 +17,7 @@
             getTrainingUpdate = function (classText) {
                 if (document.getElementById('epoch_' + String(next_epoch) + '_' + classText) !== null)
                     return;
-                fetch(classText + '/epoch_' + String(next_epoch))
+                fetch(classText + '/epoch_' + String(next_epoch) + '?t=' + String(Math.random()))
                     .then(response => {
                         if (response.ok) {
                             var d = document.createElement('div');

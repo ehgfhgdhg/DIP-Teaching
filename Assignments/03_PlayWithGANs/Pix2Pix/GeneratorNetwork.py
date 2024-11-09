@@ -41,14 +41,14 @@ class GeneratorNetwork(nn.Module):
             nn.ConvTranspose2d({in_channel}, {out_channel}, 4, 2, 1),
         )'''
         self.de_conv7 = nn.ConvTranspose2d(512, 512, 4, 2, 1)
-        self.de_conv6 = eval(CDk_decoder.format(in_channel=1024, out_channel=1024))
-        self.de_conv5 = eval(CDk_decoder.format(in_channel=1536, out_channel=1024))
-        self.de_conv4 = eval(CDk_decoder.format(in_channel=1536, out_channel=1024))
-        self.de_conv3 = eval(Ck_decoder.format(in_channel=1536, out_channel=512))
-        self.de_conv2 = eval(Ck_decoder.format(in_channel=768, out_channel=256))
-        self.de_conv1 = eval(Ck_decoder.format(in_channel=384, out_channel=128))
-        self.de_conv = eval(Ck_decoder.format(in_channel=192, out_channel=3))
-        self.output = nn.Tanh()
+        self.de_conv6 = eval(CDk_decoder.format(in_channel=512, out_channel=512))
+        self.de_conv5 = eval(CDk_decoder.format(in_channel=512, out_channel=512))
+        self.de_conv4 = eval(CDk_decoder.format(in_channel=512, out_channel=512))
+        self.de_conv3 = eval(Ck_decoder.format(in_channel=512, out_channel=256))
+        self.de_conv2 = eval(Ck_decoder.format(in_channel=256, out_channel=128))
+        self.de_conv1 = eval(Ck_decoder.format(in_channel=128, out_channel=64))
+        self.de_conv = eval(Ck_decoder.format(in_channel=64, out_channel=3))
+        self.tanh = nn.Tanh()
 
     def forward(self, x):
         # Encoder forward pass
@@ -62,12 +62,12 @@ class GeneratorNetwork(nn.Module):
         x6 = self.conv6(x5)
         x7 = self.conv7(x6)
         x8 = self.conv8(x7)
-        x7 = torch.cat((self.de_conv7(x8), x7), 1)
-        x6 = torch.cat((self.de_conv6(x7), x6), 1)
-        x5 = torch.cat((self.de_conv5(x6), x5), 1)
-        x4 = torch.cat((self.de_conv4(x5), x4), 1)
-        x3 = torch.cat((self.de_conv3(x4), x3), 1)
-        x2 = torch.cat((self.de_conv2(x3), x2), 1)
-        x1 = torch.cat((self.de_conv1(x2), x1), 1)
-        output = self.output(self.de_conv(x1))
+        x7 = self.de_conv7(x8) + x7
+        x6 = self.de_conv6(x7) + x6
+        x5 = self.de_conv5(x6) + x5
+        x4 = self.de_conv4(x5) + x4
+        x3 = self.de_conv3(x4) + x3
+        x2 = self.de_conv2(x3) + x2
+        x1 = self.de_conv1(x2) + x1
+        output = self.tanh(self.de_conv(x1))
         return output
