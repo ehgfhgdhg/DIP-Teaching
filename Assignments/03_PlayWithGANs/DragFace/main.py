@@ -10,6 +10,8 @@ from draggan import utils
 from draggan.draggan import drag_gan
 from draggan import draggan as draggan
 
+import face_alignment
+
 device = 'cuda'
 
 SIZE_TO_CLICK_SIZE = {
@@ -71,7 +73,7 @@ def on_drag(model, points, max_iters, state, size, mask, lr_box):
     if len(points['handle']) == 0:
         raise gr.Error('You must select at least one handle point and target point.')
     if len(points['handle']) != len(points['target']):
-        raise gr.Error('You have uncompleted handle points, try to selct a target point or undo the handle point.')
+        raise gr.Error('You have uncompleted handle points, try to select a target point or undo the handle point.')
     max_iters = int(max_iters)
     W = state['W']
 
@@ -201,6 +203,43 @@ def on_select_mask_tab(state):
     return img
 
 
+def on_auto_edit(image, size, smile_val, thin_val, big_eye_val):
+    if smile_val != 0 or thin_val != 0 or big_eye_val != 0:
+        fa = face_alignment.FaceAlignment(face_alignment.LandmarksType.THREE_D, flip_input=False, device=device)
+        face_landmarks = fa.get_landmarks(image)
+        if len(face_landmarks) != 1:
+            raise RuntimeError(f'Can only edit image with 1 face, currently have {len(face_landmarks)} face(s)!')
+        face_landmarks = face_landmarks[0]
+        points = {'target': [], 'handle': []}
+        if smile_val != 0:
+            points['handle'].append(face_landmarks[48, 1::-1].tolist())
+            points['target'].append((face_landmarks[48, 1::-1] + [-smile_val, 0]).tolist())
+            points['handle'].append(face_landmarks[54, 1::-1].tolist())
+            points['target'].append((face_landmarks[54, 1::-1] + [-smile_val, 0]).tolist())
+            points['handle'].append(face_landmarks[[62, 66], 1::-1].mean(axis=0).tolist())
+            points['target'].append(face_landmarks[[62, 66], 1::-1].mean(axis=0).tolist())
+        if thin_val != 0:
+            points['handle'].append(face_landmarks[3, 1::-1].tolist())
+            points['target'].append((face_landmarks[3, 1::-1] + [0, smile_val]).tolist())
+            points['handle'].append(face_landmarks[13, 1::-1].tolist())
+            points['target'].append((face_landmarks[13, 1::-1] + [0, -smile_val]).tolist())
+            points['handle'].append(face_landmarks[8, 1::-1].tolist())
+            points['target'].append(face_landmarks[8, 1::-1].tolist())
+        if big_eye_val != 0:
+            points['handle'].append(face_landmarks[37:39, 1::-1].mean(axis=0).tolist())
+            points['target'].append((face_landmarks[37:39, 1::-1].mean(axis=0) + [-smile_val, 0]).tolist())
+            points['handle'].append(face_landmarks[40:42, 1::-1].mean(axis=0).tolist())
+            points['target'].append((face_landmarks[40:42, 1::-1].mean(axis=0) + [smile_val, 0]).tolist())
+            points['handle'].append(face_landmarks[43:45, 1::-1].mean(axis=0).tolist())
+            points['target'].append((face_landmarks[43:45, 1::-1].mean(axis=0) + [-smile_val, 0]).tolist())
+            points['handle'].append(face_landmarks[46:48, 1::-1].mean(axis=0).tolist())
+            points['target'].append((face_landmarks[46:48, 1::-1].mean(axis=0) + [smile_val, 0]).tolist())
+        image = add_points_to_image(image, points, size=SIZE_TO_CLICK_SIZE[size])
+        return points, image
+    else:
+        raise RuntimeError('Please select at least one value of face editing methods to edit face!')
+
+
 def main():
     torch.cuda.manual_seed(25)
 
@@ -215,7 +254,7 @@ def main():
 
             ## Tutorial
 
-            1. (Opklional) Draw a mask indicate the movable region.
+            1. (Optional) Draw a mask indicate the movable region.
             2. Setup a least one pair of handle point and target point.
             3. Click "Drag it". 
 
@@ -277,6 +316,14 @@ def main():
                     with gr.Row():
                         btn = gr.Button('Drag it', variant='primary')
 
+                    # Auto face edit
+                    with gr.Row():
+                        smile_slider = gr.Slider(0, 500, 0, step=1, label='Smile')
+                        thin_face_slider = gr.Slider(0, 500, 0, step=1, label='Thinner face')
+                        big_eye_slider = gr.Slider(0, 500, 0, step=1, label='Bigger eye')
+                    with gr.Row():
+                        auto_edit_btn = gr.Button('Auto edit', variant='primary')
+
                 with gr.Accordion('Save', visible=False) as save_panel:
                     files = gr.Files(value=[])
 
@@ -305,17 +352,18 @@ def main():
         max_iters.change(on_max_iter_change, inputs=max_iters, outputs=progress)
         masktab.select(lambda: gr.update(value=None), outputs=[mask]).then(on_select_mask_tab, inputs=[state],
                                                                            outputs=[mask])
+        # Auto face edit
+        auto_edit_btn.click(on_auto_edit, inputs=[image, size, smile_slider, thin_face_slider, big_eye_slider],
+                            outputs=[points, image]).then(
+            on_drag, inputs=[model, points, max_iters, state, size, mask, lr_box],
+            outputs=[image, state, progress]).then(
+            on_show_save, outputs=save_panel).then(
+            on_save_files, inputs=[image, state], outputs=[files]
+        )
     return demo
 
 
 if __name__ == '__main__':
-    import face_alignment
-    from skimage import io
-
-    fa = face_alignment.FaceAlignment(face_alignment.LandmarksType.THREE_D, flip_input=False, device='cuda')
-    input_image = io.imread('aflw-test.jpg')
-    face_landmarks = fa.get_landmarks(input_image)
-
     import argparse
 
     parser = argparse.ArgumentParser()
