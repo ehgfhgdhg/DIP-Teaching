@@ -205,7 +205,9 @@ def on_select_mask_tab(state):
 
 def on_auto_edit(image, size, smile_val, thin_val, big_eye_val):
     if smile_val != 0 or thin_val != 0 or big_eye_val != 0:
+        print('Loading face alignment...')
         fa = face_alignment.FaceAlignment(face_alignment.LandmarksType.THREE_D, flip_input=False, device=device)
+        print('Getting face landmarks...')
         face_landmarks = fa.get_landmarks(image)
         if len(face_landmarks) != 1:
             raise RuntimeError(f'Can only edit image with 1 face, currently have {len(face_landmarks)} face(s)!')

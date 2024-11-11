@@ -12,8 +12,8 @@ First select a model to produce an image containing only one human face, then ad
 # Results
 
 ![Web page](Screenshot_11-11-2024_234419_127.0.0.1.jpeg)
-![Result](image_75dffb06-5cda-4bbe-9265-9b3d5d33c4b0.png)
-<video src="video_c16a4390-1553-42d2-abf5-97bbd91b399d.mp4" alt="Result video" controls>Result video</video>
+![Result](image_19c8619d-7020-4b23-92bf-f5d5a4a96799.png)
+<video src="video_b7ce60e5-ab15-461a-871d-979186bf2724.mp4" alt="Result video" controls>Result video</video>
 
 ---
 
