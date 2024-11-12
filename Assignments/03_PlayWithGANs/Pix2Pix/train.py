@@ -12,7 +12,7 @@ from DiscriminatorNetwork import DiscriminatorNetwork
 from torch.optim.lr_scheduler import StepLR
 
 IMAGE_GENERATION = True
-LAMBDA = 100
+LAMBDA = 100 # TODO
 
 def tensor_to_image(tensor):
     """
@@ -102,7 +102,7 @@ def train_one_epoch(generator_model, discriminator_model, dataloader, gen_optimi
         real_p = discriminator_model(image_output, image_input)
         fake_p = discriminator_model(outputs.detach(), image_input)
         # dis_loss = torch.max(-(1.0000001 - fake_p).log(), -(real_p + 0.0000001).log()).sum()
-        dis_loss = bce_criterion(real_p, torch.ones_like(real_p)) + bce_criterion(fake_p, torch.zeros_like(fake_p))
+        dis_loss = (bce_criterion(real_p, torch.ones_like(real_p)) + bce_criterion(fake_p, torch.zeros_like(fake_p))) / 2
 
         # Backward pass and optimization
         dis_loss.backward()
@@ -213,20 +213,19 @@ def main():
         generator_model.load_state_dict(checkpoint['generator_model_state_dict'])
         discriminator_model.load_state_dict(checkpoint['discriminator_model_state_dict'])
         # Initialize optimizers and add learning rate schedulers for decay
-        gen_optimizer = optim.Adam([{'params': generator_model.parameters(), 'initial_lr': 0.001}], lr=0.001,
+        gen_optimizer = optim.Adam([{'params': generator_model.parameters(), 'initial_lr': 0.0002}], lr=0.0002,
                                    betas=(0.5, 0.999))
         gen_scheduler = StepLR(gen_optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
-        dis_optimizer = optim.Adam([{'params': discriminator_model.parameters(), 'initial_lr': 0.001}], lr=0.001,
+        dis_optimizer = optim.Adam([{'params': discriminator_model.parameters(), 'initial_lr': 0.0002}], lr=0.0002,
                                    betas=(0.5, 0.999))
         dis_scheduler = StepLR(dis_optimizer, step_size=200, gamma=0.2, last_epoch=start_num_epochs)
     else:
         if checkpoint:
             generator_model.load_state_dict(checkpoint)
         # Initialize optimizers and add learning rate schedulers for decay
-        gen_optimizer = optim.Adam(generator_model.parameters(), lr=0.001, betas=(0.5, 0.999))
+        gen_optimizer = optim.Adam(generator_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
         gen_scheduler = StepLR(gen_optimizer, step_size=200, gamma=0.2)
-        dis_optimizer = optim.SGD(discriminator_model.parameters(), lr=0.001)
-        # dis_optimizer = optim.Adam(discriminator_model.parameters(), lr=0.001, betas=(0.5, 0.999))
+        dis_optimizer = optim.Adam(discriminator_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
         dis_scheduler = StepLR(dis_optimizer, step_size=200, gamma=0.2)
 
     # Training loop
