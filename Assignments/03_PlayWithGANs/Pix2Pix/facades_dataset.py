@@ -26,6 +26,8 @@ class FacadesDataset(Dataset):
 
         rhw = torch.randint(0, 31, (2,))
         image_rgb, image_semantic = image_rgb[rhw[0]:rhw[0]+256, rhw[1]:rhw[1]+256, :], image_semantic[rhw[0]:rhw[0] + 256, rhw[1]:rhw[1] + 256, :]
+        if torch.randint(2, (1,)) == 0:
+            image_rgb, image_semantic = image_rgb[:, ::-1, :].copy(), image_semantic[:, ::-1, :].copy()
 
         image_rgb = torch.from_numpy(image_rgb).permute(2, 0, 1).float()/255.0 * 2.0 -1.0
         image_semantic = torch.from_numpy(image_semantic).permute(2, 0, 1).float()/255.0 * 2.0 -1.0
