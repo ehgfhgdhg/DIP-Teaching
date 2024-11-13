@@ -17,31 +17,34 @@ The provided code will train the model on the [Facades Dataset](https://cmp.felk
 
 ## Results
 
-Results using GAN:
-
-Training data:
-
-<img src="result_1 (3).png" alt="result_1" height="100">
-<img src="result_2 (3).png" alt="result_2" height="100">
-<img src="result_3 (3).png" alt="result_3" height="100">
-<img src="result_4 (3).png" alt="result_4" height="100">
-<img src="result_5 (3).png" alt="result_5" height="100">
-
-Validation data:
-
-<img src="result_1 (4).png" alt="result_1" height="100">
-<img src="result_2 (4).png" alt="result_2" height="100">
-<img src="result_3 (4).png" alt="result_3" height="100">
-<img src="result_4 (4).png" alt="result_4" height="100">
-<img src="result_5 (4).png" alt="result_5" height="100">
-
-Previous results without GAN:
+Validation data without GAN:
 
 <img src="result_1 (2).png" alt="result_1" height="100">
 <img src="result_2 (2).png" alt="result_2" height="100">
 <img src="result_3 (2).png" alt="result_3" height="100">
 <img src="result_4 (2).png" alt="result_4" height="100">
 <img src="result_5 (2).png" alt="result_5" height="100">
+
+Validation data with GAN:
+
+<img src="result_1.png" alt="result_1" height="100">
+<img src="result_2.png" alt="result_2" height="100">
+<img src="result_3.png" alt="result_3" height="100">
+<img src="result_4.png" alt="result_4" height="100">
+<img src="result_5.png" alt="result_5" height="100">
+
+More test data of GAN:
+
+<img src="7 (2).jpg" alt="7" height="100">
+<img src="7.jpg" alt="7" height="100">
+<img src="14 (2).jpg" alt="14" height="100">
+<img src="14.jpg" alt="14" height="100">
+<img src="16 (2).jpg" alt="16" height="100">
+<img src="16.jpg" alt="16" height="100">
+<img src="25 (2).jpg" alt="25" height="100">
+<img src="25.jpg" alt="25" height="100">
+<img src="28 (2).jpg" alt="28" height="100">
+<img src="28.jpg" alt="28" height="100">
 
 ## Acknowledgement
 

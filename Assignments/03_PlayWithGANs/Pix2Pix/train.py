@@ -117,7 +117,7 @@ def train_one_epoch(generator_model, discriminator_model, dataloader, gen_optimi
         # Compute the loss
         fake_p = discriminator_model(outputs, image_input)
         if LAMBDA > 0:
-            gen_loss = bce_criterion(fake_p, torch.ones_like(fake_p)) / LAMBDA + l1_criterion(outputs, image_output)
+            gen_loss = bce_criterion(fake_p, torch.ones_like(fake_p)) + l1_criterion(outputs, image_output) * LAMBDA
         else:
             gen_loss = bce_criterion(fake_p, torch.ones_like(fake_p))
 
