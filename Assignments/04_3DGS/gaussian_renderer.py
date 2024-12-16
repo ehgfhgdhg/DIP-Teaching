@@ -121,7 +121,7 @@ class GaussianRenderer(nn.Module):
         
         # 7. Compute weights
         ### FILL:
-        weights = alphas.cumprod(0) # (N, H, W)
+        weights = (1 - alphas).cumprod(0) # (N, H, W)
         
         # 8. Final rendering
         rendered = (weights.unsqueeze(-1) * colors).sum(dim=0)  # (H, W, 3)
