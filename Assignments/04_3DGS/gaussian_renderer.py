@@ -47,11 +47,11 @@ class GaussianRenderer(nn.Module):
         # Compute Jacobian of perspective projection
         J_proj = torch.zeros((N, 2, 3), device=means3D.device)
         ### FILL:
-        ### J_proj = ...
+        J_proj = K[None, :2, :] / screen_points[:, 2, None, None] - K[None, 2, :] * screen_points[:, :2, None] / screen_points[:, 2, None, None].pow(2)
         
         # Transform covariance to camera space
         ### FILL: Aplly world to camera rotation to the 3d covariance matrix
-        ### covs_cam = ...  # (N, 3, 3)
+        covs_cam = torch.matmul(R, torch.matmul(covs3d, R.T))  # (N, 3, 3)
         
         # Project to 2D
         covs2D = torch.bmm(J_proj, torch.bmm(covs_cam, J_proj.permute(0, 2, 1)))  # (N, 2, 2)
@@ -75,8 +75,10 @@ class GaussianRenderer(nn.Module):
         covs2D = covs2D + eps * torch.eye(2, device=covs2D.device).unsqueeze(0)
         
         # Compute determinant for normalization
+        covs2D_det = torch.linalg.det(covs2D) # (N,)
         ### FILL: compute the gaussian values
-        ### gaussian = ... ## (N, H, W)
+        P = -0.5 * dx[:, :, :, None, :].matmul(torch.linalg.inv(covs2D[:, None, None, :, :]).matmul(dx[:, :, :, :, None])).squeeze(3, 4) ## (N, H, W)
+        gaussian = torch.exp(P) / (2 * torch.pi * covs2D_det[:, None, None].sqrt()) ## (N, H, W)
     
         return gaussian
 
@@ -102,7 +104,7 @@ class GaussianRenderer(nn.Module):
         indices = torch.argsort(depths, dim=0, descending=False)  # (N, )
         means2D = means2D[indices]      # (N, 2)
         covs2D = covs2D[indices]       # (N, 2, 2)
-        colors = colors[ indices]       # (N, 3)
+        colors = colors[indices]       # (N, 3)
         opacities = opacities[indices] # (N, 1)
         valid_mask = valid_mask[indices] # (N,)
         
@@ -119,7 +121,7 @@ class GaussianRenderer(nn.Module):
         
         # 7. Compute weights
         ### FILL:
-        ### weights = ... # (N, H, W)
+        weights = alphas.cumprod(0) # (N, H, W)
         
         # 8. Final rendering
         rendered = (weights.unsqueeze(-1) * colors).sum(dim=0)  # (H, W, 3)

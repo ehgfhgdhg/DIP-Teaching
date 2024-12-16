@@ -97,7 +97,7 @@ class GaussianModel(nn.Module):
         return torch.stack([
             R00, R01, R02,
             R10, R11, R12,
-            R20, R21, R22
+            R20, R21, R22,
         ], dim=-1).reshape(-1, 3, 3)
 
     def compute_covariance(self) -> torch.Tensor:
@@ -111,7 +111,8 @@ class GaussianModel(nn.Module):
         
         # Compute covariance
         ### FILL:
-        ### Covs3d = ...
+        RS = R.bmm(S)
+        Covs3d = RS.bmm(RS.transpose(1, 2))
         
         return Covs3d
 
