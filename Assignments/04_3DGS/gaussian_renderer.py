@@ -12,6 +12,7 @@ class GaussianRenderer(nn.Module):
         super().__init__()
         self.H = image_height
         self.W = image_width
+        self.eps = 1e-4
         
         # Pre-compute pixel coordinates grid
         y, x = torch.meshgrid(
@@ -71,8 +72,7 @@ class GaussianRenderer(nn.Module):
         dx = pixels.unsqueeze(0) - means2D.reshape(N, 1, 1, 2)
         
         # Add small epsilon to diagonal for numerical stability
-        eps = 1e-4
-        covs2D = covs2D + eps * torch.eye(2, device=covs2D.device).unsqueeze(0)
+        covs2D = covs2D + self.eps * torch.eye(2, device=covs2D.device).unsqueeze(0)
         
         # Compute determinant for normalization
         covs2D_det = torch.linalg.det(covs2D) # (N,)
@@ -121,7 +121,7 @@ class GaussianRenderer(nn.Module):
         
         # 7. Compute weights
         ### FILL:
-        weights = (1 - alphas).cumprod(0) # (N, H, W)
+        weights = (1 - alphas).cumprod(0) * alphas / (1 + self.eps - alphas) # (N, H, W)
         
         # 8. Final rendering
         rendered = (weights.unsqueeze(-1) * colors).sum(dim=0)  # (H, W, 3)
