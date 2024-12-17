@@ -28,26 +28,32 @@ python train.py --colmap_dir data/chair --checkpoint_dir data/chair/checkpoints
 <video controls autoplay muted loop width=500>
   <source src="debug_rendering.mp4" type="video/mp4">
   <p>
-    你的浏览器不支持 HTML5 视频。这里有一个<a
+    Your browser doesn't support HTML5 video. There is a <a
       href="debug_rendering.mp4"
       download="debug_rendering.mp4"
-      >视频</a
-    >链接。
+      >video</a
+    >link.
   </p>
 </video>
 <video controls autoplay muted loop width=500>
   <source src="debug_rendering (2).mp4" type="video/mp4">
   <p>
-    你的浏览器不支持 HTML5 视频。这里有一个<a
+    Your browser doesn't support HTML5 video. There is a <a
       href="debug_rendering (2).mp4"
       download="debug_rendering (2).mp4"
-      >视频</a
-    >链接。
+      >video</a
+    >link.
   </p>
 </video>
 
 ### Compare with the original 3DGS Implementation
-Since we use a pure PyTorch implementation, the training speed and GPU memory usage are far from satisfactory. Also, we do not implement some crucial parts like adaptive Gaussian densification scheme. Run the [original 3DGS implementation](https://github.com/graphdeco-inria/gaussian-splatting) with the same dataset to compare the results.
+Since we use a pure PyTorch implementation, the training speed and GPU memory usage are far from satisfactory. Also, we do not implement some crucial parts like adaptive Gaussian densification scheme.
+
+Result of 3DGS official implementation:
+![Initial chair](Screenshot%202024-12-17%20224832.png)
+![Optimized chair](Screenshot%202024-12-17%20223736.png)
+![Initial lego](Screenshot%202024-12-17%20224133.png)
+![Optimized lego](Screenshot%202024-12-17%20224803.png)
 
 ### Acknowledgement:
 - [Paper: 3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)
