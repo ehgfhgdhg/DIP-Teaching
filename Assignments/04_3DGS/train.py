@@ -174,6 +174,7 @@ class GaussianTrainer:
 
         # Compute RGB loss
         loss = torch.abs(rendered_images - images).mean()
+        assert not loss.isnan()
         
         # Backward pass
         self.optimizer.zero_grad()

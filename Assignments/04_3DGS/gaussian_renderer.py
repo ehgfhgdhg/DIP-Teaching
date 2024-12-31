@@ -6,13 +6,13 @@ from dataclasses import dataclass
 import numpy as np
 import cv2
 
+EPS = 1e-4
 
 class GaussianRenderer(nn.Module):
     def __init__(self, image_height: int, image_width: int):
         super().__init__()
         self.H = image_height
         self.W = image_width
-        self.eps = 1e-4
         
         # Pre-compute pixel coordinates grid
         y, x = torch.meshgrid(
@@ -42,16 +42,16 @@ class GaussianRenderer(nn.Module):
         
         # 3. Project to screen space using camera intrinsics
         screen_points = cam_points @ K.T  # (N, 3)
-        means2D = screen_points[..., :2] / screen_points[..., 2:3] # (N, 2)
+        means2D = screen_points[..., :2] / (screen_points[..., 2:3] + EPS) # (N, 2)
         
         # 4. Transform covariance to camera space and then to 2D
         # Compute Jacobian of perspective projection
         J_proj = torch.zeros((N, 2, 3), device=means3D.device)
         ### FILL:
-        J_proj = K[None, :2, :] / screen_points[:, 2, None, None] - K[None, 2, :] * screen_points[:, :2, None] / screen_points[:, 2, None, None].pow(2)
+        J_proj = K[None, :2, :] / (screen_points[:, 2, None, None] + EPS) - K[None, 2, :] * screen_points[:, :2, None] / (screen_points[:, 2, None, None].pow(2) + EPS)
         
         # Transform covariance to camera space
-        ### FILL: Aplly world to camera rotation to the 3d covariance matrix
+        ### FILL: Apply world to camera rotation to the 3d covariance matrix
         covs_cam = torch.matmul(R, torch.matmul(covs3d, R.T))  # (N, 3, 3)
         
         # Project to 2D
@@ -72,13 +72,13 @@ class GaussianRenderer(nn.Module):
         dx = pixels.unsqueeze(0) - means2D.reshape(N, 1, 1, 2)
         
         # Add small epsilon to diagonal for numerical stability
-        covs2D = covs2D + self.eps * torch.eye(2, device=covs2D.device).unsqueeze(0)
+        covs2D = covs2D + EPS * torch.eye(2, device=covs2D.device).unsqueeze(0)
         
         # Compute determinant for normalization
-        covs2D_det = torch.linalg.det(covs2D) # (N,)
+        covs2D_det = torch.clamp(torch.linalg.det(covs2D), min=0) # (N,)
         ### FILL: compute the gaussian values
-        P = -0.5 * dx[:, :, :, None, :].matmul(torch.linalg.inv(covs2D[:, None, None, :, :]).matmul(dx[:, :, :, :, None])).squeeze(3, 4) ## (N, H, W)
-        gaussian = torch.exp(P) / (2 * torch.pi * covs2D_det[:, None, None].sqrt()) ## (N, H, W)
+        P = -0.5 * dx[:, :, :, None, :].matmul(torch.linalg.inv(covs2D[:, None, None, :, :]).matmul(dx[:, :, :, :, None])).squeeze(4).squeeze(3) ## (N, H, W)
+        gaussian = torch.exp(P) / (2 * torch.pi * covs2D_det[:, None, None].sqrt() + EPS) ## (N, H, W)
     
         return gaussian
 
@@ -121,7 +121,7 @@ class GaussianRenderer(nn.Module):
         
         # 7. Compute weights
         ### FILL:
-        weights = (1 - alphas).cumprod(0) * alphas / (1 + self.eps - alphas) # (N, H, W)
+        weights = (1 - alphas).cumprod(0) * alphas / (1 + EPS - alphas) # (N, H, W)
         
         # 8. Final rendering
         rendered = (weights.unsqueeze(-1) * colors).sum(dim=0)  # (H, W, 3)
